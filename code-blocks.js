@@ -27,21 +27,30 @@ document.querySelectorAll('.article-body pre').forEach((pre) => {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'copy-code';
-  button.textContent = 'Copy';
+  button.textContent = '⧉';
   button.setAttribute('aria-label', 'Copy code to clipboard');
   button.setAttribute('aria-live', 'polite');
+  button.title = 'Copy code';
   wrapper.prepend(button);
 
   button.addEventListener('click', async () => {
     try {
       await copyText(code.textContent ?? '');
-      button.textContent = 'Copied';
+      button.textContent = '✓';
+      button.classList.add('is-copied');
+      button.setAttribute('aria-label', 'Code copied');
+      button.title = 'Copied';
     } catch {
-      button.textContent = 'Copy failed';
+      button.textContent = '!';
+      button.setAttribute('aria-label', 'Copy failed');
+      button.title = 'Copy failed';
     }
 
     window.setTimeout(() => {
-      button.textContent = 'Copy';
+      button.textContent = '⧉';
+      button.classList.remove('is-copied');
+      button.setAttribute('aria-label', 'Copy code to clipboard');
+      button.title = 'Copy code';
     }, 1600);
   });
 });
