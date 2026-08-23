@@ -80,21 +80,53 @@ HTTP/1.1 200 OK
 
 Plain routed reachability. Exactly as predicted.
 
-**Making it stick**: no passwordless sudo on the Nano, so no systemd unit. The pragmatic fix was a user crontab `@reboot` entry:
+**Making it stick, take one**: no passwordless sudo on the Nano, so no systemd unit (this OS runs OpenRC, not systemd, anyway). The first attempt was a user crontab `@reboot` entry:
 
 ```bash
 (crontab -l 2>/dev/null; echo "@reboot cd ~/matter-test && node --enable-source-maps node_modules/matter-server/dist/esm/MatterServer.js --storage-path ~/matter-test/data --primary-interface eth0 >> ~/matter-test/server.log 2>&1 &") | crontab -
 ```
 
-That's more than it looks like at first glance:
+Piping into `crontab -` instead of running `crontab -e` was deliberate: `crontab -e` opens an interactive editor, `vi` by default, and the Nano's web-based terminal wasn't passing the Escape key through, which makes `vi` nearly unusable. This sidesteps that entirely.
 
-- `crontab -l 2>/dev/null` dumps whatever's already in the crontab, with the error suppressed if there's nothing there yet
-- `echo "@reboot ..."` is the new line being added; `@reboot` means "run this once, right after cron starts following a boot", which is exactly the persistence behavior I wanted
-- both of those get piped into `crontab -`, which reads a complete crontab from stdin and installs it, replacing whatever was there. Combining the old contents with the new line first is what keeps this additive instead of wiping anything out
-- piping into `crontab -` also means `crontab -e` (which opens an interactive editor, `vi` by default) never comes into it at all. That mattered here because the Nano's web-based terminal wasn't passing the Escape key through, which makes `vi` nearly unusable
-- inside the cron line itself, the trailing `&` backgrounds the `node` process so cron doesn't sit there waiting on it forever, and `>> ~/matter-test/server.log 2>&1` redirects both stdout and stderr to a log file, since a `@reboot` job has no terminal attached to print to if something goes wrong
+It looked like it worked. `crontab -l` showed the entry sitting there correctly, and the process itself had been running fine for weeks. Then it crashed (an apparent OOM kill mid-commissioning, unsurprising on a box with only 512MB of RAM) and, separately, a reboot didn't bring it back either. Digging into why turned up the actual problem: there's no `crond` running on this OS at all. `crontab -e`/`crontab -l` let you edit and inspect a crontab file, but nothing was ever reading it. The `@reboot` entry had been completely inert the whole time; the process had only ever stayed alive because I'd started it by hand and it happened not to crash for a few weeks. The crontab file looking correct told me nothing about whether anything was actually executing it.
 
-(Worth knowing if you try this yourself: cold boot to the WebSocket actually answering takes about 2 minutes on this hardware, not a hang, just genuinely that slow to get through certificate/vendor-database initialization.)
+**Making it stick, properly**: every other background service on this box, including the OTBR agent itself, runs as a real OpenRC service via `supervise-daemon`. Mirroring that instead of using cron gets two things at once: it survives a reboot, and OpenRC automatically respawns the process if it dies again, which cron would never have done even if it had been running in the first place.
+
+```sh
+#!/sbin/openrc-run
+# matter-server (matterjs-server) - Matter Controller for Home Assistant
+
+description="Matter Server (matterjs-server)"
+
+supervisor="supervise-daemon"
+command="/opt/bin/node"
+command_args="--enable-source-maps /home/smlight/matter-test/node_modules/matter-server/dist/esm/MatterServer.js --storage-path /home/smlight/matter-test/data --primary-interface eth0"
+command_user="smlight:smlight"
+pidfile="/var/run/matter-server.pid"
+output_log="/var/log/matter-server.log"
+error_log="/var/log/matter-server.log"
+
+depend() {
+        need localmount net
+        after openthread
+        provide matter-server
+}
+```
+
+A few choices worth calling out:
+
+- `command_user="smlight:smlight"` runs it as the same unprivileged user it had always been started as by hand. The OTBR agent's own service runs as root because it needs raw radio access; matter-server never did, so there's no reason to widen that.
+- `after openthread` makes sure the Thread interface and dataset are already up before matter-server starts reading them, matching how it behaved when started by hand well after the box had finished booting.
+- Log and pid file paths follow the same `/var/log/` and `/var/run/` convention the rest of the system's own services use, instead of a file tucked under my home directory.
+
+Dropping it in and enabling it is the same shape as any other OpenRC service:
+
+```bash
+sudo rc-update add matter-server default
+sudo rc-service matter-server start
+```
+
+(Worth knowing if you try this yourself: cold boot to the WebSocket actually answering takes about 2 minutes on this hardware either way, not a hang, just genuinely that slow to get through certificate/vendor-database initialization.)
 
 ## Wiring up Home Assistant
 
@@ -134,5 +166,6 @@ A few things worth calling out for anyone in a similar spot:
 - **Check whether `python-matter-server` guidance is stale before following it.** As of Home Assistant 2026.7, it's EOL, the current implementation is `matterjs-server`, and a lot of still-circulating guides haven't caught up.
 - **A device that "isn't Docker-capable" might still run Node directly**, if it's a real embedded Linux box rather than a single-purpose microcontroller. Worth checking before assuming you need a whole extra machine.
 - **Test the shortest path before building the complicated one.** The phone-credential-sync problem I spent the most time on didn't need solving at all.
+- **A config file looking correct doesn't mean anything is reading it.** `crontab -l` showing the right entry told me nothing about whether a `crond` was actually running to act on it. It wasn't, and I only found out after a crash and a reboot both failed to bring the process back.
 
 It's been running solidly since.
