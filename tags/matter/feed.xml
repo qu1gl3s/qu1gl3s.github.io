@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8" ?><rss version="2.0"><channel><title>Quigles&apos; blog — #matter</title><link>https://quigley.au/tags/matter</link><description>Posts tagged matter.</description>
-    <item>
-      <title>Matter-over-Thread on a Self-Hosted Home Assistant, Without HAOS</title>
-      <link>https://quigley.au/writing/matter-over-thread-home-assistant-without-haos</link>
-      <guid>https://quigley.au/writing/matter-over-thread-home-assistant-without-haos</guid>
-      <pubDate>Sun, 23 Aug 2026 00:00:00 GMT</pubDate>
-      <description>Getting Matter-over-Thread working across VLANs with Docker-based Home Assistant and an SMLIGHT SMHUB Nano, without an mDNS reflector.</description>
-      <category>home-assistant</category><category>matter</category><category>self-hosting</category>
-    </item></channel></rss>
