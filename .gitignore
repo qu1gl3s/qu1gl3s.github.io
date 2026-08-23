@@ -1,0 +1,10 @@
+.next/
+out/
+_site/
+node_modules/
+lib/posts.generated.ts
+*.tsbuildinfo
+.DS_Store
+
+# Drafts are deliberately kept outside this public repository.
+drafts/

@@ -1,0 +1,35 @@
+{
+  "name": "quigles-blog",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "generate:posts": "node scripts/generate-posts.mjs",
+    "predev": "npm run generate:posts",
+    "dev": "next dev",
+    "prelint": "npm run generate:posts",
+    "lint": "eslint . --ignore-pattern .next --ignore-pattern out --ignore-pattern _site",
+    "prebuild": "npm run generate:posts",
+    "build": "next build",
+    "build:pages": "npm run generate:posts && next build",
+    "prepare:public": "node scripts/prepare-public.mjs",
+    "verify:public": "node scripts/verify-public.mjs"
+  },
+  "dependencies": {
+    "next": "16.2.6",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "react-icons": "^5.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.19",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "eslint": "9.39.4",
+    "eslint-config-next": "16.2.6",
+    "typescript": "5.9.3"
+  },
+  "type": "module"
+}
