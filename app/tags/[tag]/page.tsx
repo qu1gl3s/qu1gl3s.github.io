@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { FaRss } from 'react-icons/fa6';
 import { SiteFooter } from '@/components/SiteFooter';
 import { SiteHeader } from '@/components/SiteHeader';
+import { pageAlternates, pageUrl } from '@/lib/site';
 import { postsWithTag, tagFromSlug, tagSlug, tags } from '@/lib/tags';
 
 type Props = { params: Promise<{ tag: string }> };
@@ -22,7 +23,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `#${tag}`,
     description,
-    openGraph: { title: `#${tag}`, description, url: `/tags/${slug}`, images: [] },
+    alternates: pageAlternates(`/tags/${slug}`, `/tags/${slug}/feed.xml`),
+    openGraph: { title: `#${tag}`, description, url: pageUrl(`/tags/${slug}`), images: [] },
     twitter: { card: 'summary', title: `#${tag}`, description, images: [] },
   };
 }

@@ -1,8 +1,10 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SiteFooter } from '@/components/SiteFooter';
 import { SiteHeader } from '@/components/SiteHeader';
 import { TagLinks } from '@/components/TagLinks';
 import { posts } from '@/lib/posts.generated';
+import { pageAlternates } from '@/lib/site';
 
 function readableDate(date: string) {
   return new Intl.DateTimeFormat('en-AU', {
@@ -11,6 +13,8 @@ function readableDate(date: string) {
     year: 'numeric',
   }).format(new Date(`${date}T00:00:00`));
 }
+
+export const metadata: Metadata = { alternates: pageAlternates('/') };
 
 export default function Home() {
   return (

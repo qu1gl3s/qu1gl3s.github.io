@@ -24,9 +24,11 @@ for (const file of required) {
   if (!relativeFiles.has(file)) throw new Error(`Pages artifact is missing ${file}`);
 }
 
-if ((await readFile(path.join(target, 'CNAME'), 'utf8')).trim() !== 'quigley.au') {
+const host = (await readFile(path.join(target, 'CNAME'), 'utf8')).trim();
+if (host !== 'quigley.au') {
   throw new Error('Pages artifact has an unexpected CNAME');
 }
+const origin = `https://${host}`;
 
 const violations = [];
 for (const file of files) {
@@ -62,4 +64,61 @@ for (const file of relativeFiles) {
   if (!relativeFiles.has(article)) throw new Error(`${file}: generated article is missing`);
 }
 
-console.log(`Verified ${relativeFiles.size} published files, strict CSP, and fingerprinted assets.`);
+// Every URL we advertise must be a URL we actually serve. `trailingSlash: true` means pages
+// live at <dir>/index.html, so a slash-less URL is a 301 that Search Console reports back to us.
+function articleFor(url) {
+  if (!url.startsWith(`${origin}/`)) return { error: `is not on ${origin}` };
+  const pathname = url.slice(origin.length);
+  if (!pathname.endsWith('/')) return { error: 'has no trailing slash, so it redirects' };
+  const file = path.posix.join(pathname.slice(1), 'index.html');
+  if (!relativeFiles.has(file)) return { error: `has no ${file} in the artifact` };
+  return { file };
+}
+
+const urlProblems = [];
+function checkUrls(source, urls) {
+  for (const url of urls) {
+    const { error } = articleFor(url);
+    if (error) urlProblems.push(`${source}: ${url} ${error}`);
+  }
+}
+
+const sitemap = await readFile(path.join(target, 'sitemap.xml'), 'utf8');
+const locations = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
+if (!locations.length) throw new Error('sitemap.xml lists no URLs');
+checkUrls('sitemap.xml', locations);
+
+for (const file of relativeFiles) {
+  if (!file.endsWith('feed.xml')) continue;
+  const feed = await readFile(path.join(target, file), 'utf8');
+  checkUrls(file, [
+    ...[...feed.matchAll(/<link>([^<]+)<\/link>/g)].map((match) => match[1]),
+    ...[...feed.matchAll(/<guid[^>]*>([^<]+)<\/guid>/g)].map((match) => match[1]),
+  ]);
+}
+
+// Each page must declare itself canonical, so discovery order cannot decide which URL wins.
+for (const file of relativeFiles) {
+  if (path.basename(file) !== 'index.html') continue;
+  const directory = path.posix.dirname(file);
+  const expected = directory === '.' ? `${origin}/` : `${origin}/${directory}/`;
+  const canonical = (await readFile(path.join(target, file), 'utf8')).match(/<link rel="canonical" href="([^"]+)"/i)?.[1];
+  if (!canonical) urlProblems.push(`${file}: has no canonical link`);
+  else if (canonical !== expected) urlProblems.push(`${file}: canonical is ${canonical}, expected ${expected}`);
+}
+
+for (const file of relativeFiles) {
+  const match = file.match(/^tags\/([^/]+)\/index\.html$/);
+  if (match && !relativeFiles.has(`tags/${match[1]}/feed.xml`)) {
+    urlProblems.push(`tags/${match[1]}: tag page has no feed.xml`);
+  }
+}
+
+const robots = await readFile(path.join(target, 'robots.txt'), 'utf8');
+for (const line of ['Disallow: /feed.xml', 'Disallow: /tags/*/feed.xml', `Sitemap: ${origin}/sitemap.xml`]) {
+  if (!robots.includes(line)) urlProblems.push(`robots.txt: missing "${line}"`);
+}
+
+if (urlProblems.length) throw new Error(`Published URLs disagree with published files:\n${urlProblems.join('\n')}`);
+
+console.log(`Verified ${relativeFiles.size} published files, strict CSP, fingerprinted assets, and ${locations.length} canonical URLs.`);
