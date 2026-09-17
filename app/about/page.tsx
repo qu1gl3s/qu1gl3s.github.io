@@ -1,8 +1,13 @@
 import type { Metadata } from 'next';
 import { SiteFooter } from '@/components/SiteFooter';
 import { SiteHeader } from '@/components/SiteHeader';
+import { pageAlternates } from '@/lib/site';
 
-export const metadata: Metadata = { title: 'About', description: "About Quigles' blog." };
+export const metadata: Metadata = {
+  title: 'About',
+  description: "About Quigles' blog.",
+  alternates: pageAlternates('/about'),
+};
 
 export default function AboutPage() {
   return (

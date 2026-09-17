@@ -3,11 +3,13 @@ import Link from 'next/link';
 import { FaRss } from 'react-icons/fa6';
 import { SiteFooter } from '@/components/SiteFooter';
 import { SiteHeader } from '@/components/SiteHeader';
+import { pageAlternates } from '@/lib/site';
 import { postsWithTag, tagSlug, tags } from '@/lib/tags';
 
 export const metadata: Metadata = {
   title: 'Tags',
   description: "Browse Quigles' blog by tag.",
+  alternates: pageAlternates('/tags'),
 };
 
 export default function TagsPage() {

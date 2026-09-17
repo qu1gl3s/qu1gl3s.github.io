@@ -4,8 +4,13 @@ import { SiteFooter } from '@/components/SiteFooter';
 import { SiteHeader } from '@/components/SiteHeader';
 import { TagLinks } from '@/components/TagLinks';
 import { posts } from '@/lib/posts.generated';
+import { pageAlternates } from '@/lib/site';
 
-export const metadata: Metadata = { title: 'Posts', description: 'All posts published by quigles.' };
+export const metadata: Metadata = {
+  title: 'Posts',
+  description: 'All posts published by quigles.',
+  alternates: pageAlternates('/writing'),
+};
 
 export default function WritingPage() {
   return (

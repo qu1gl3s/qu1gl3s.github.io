@@ -6,6 +6,7 @@ import { SiteFooter } from '@/components/SiteFooter';
 import { SiteHeader } from '@/components/SiteHeader';
 import { TagLinks } from '@/components/TagLinks';
 import { posts } from '@/lib/posts.generated';
+import { pageAlternates, pageUrl } from '@/lib/site';
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -22,7 +23,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: post.title,
     description: post.excerpt,
-    openGraph: { title: post.title, description: post.excerpt, type: 'article', url: `/writing/${post.slug}`, images: [] },
+    alternates: pageAlternates(`/writing/${post.slug}`),
+    openGraph: { title: post.title, description: post.excerpt, type: 'article', url: pageUrl(`/writing/${post.slug}`), images: [] },
     twitter: { card: 'summary', title: post.title, description: post.excerpt, images: [] },
   };
 }

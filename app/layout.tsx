@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { pageUrl } from '@/lib/site';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://quigley.au'),
+  metadataBase: new URL(pageUrl('/')),
   authors: [{ name: 'quigles', url: 'https://github.com/qu1gl3s' }],
   alternates: { types: { 'application/rss+xml': '/feed.xml' } },
   title: {
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Quigles' blog",
     description: 'Notes on technology, work, and other things.',
-    url: 'https://quigley.au',
+    url: pageUrl('/'),
     siteName: "Quigles' blog",
     type: 'website',
     images: [{ url: '/og.png', width: 1200, height: 630, alt: "Quigles' blog — quigley.au" }],
