@@ -1,5 +1,6 @@
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const target = process.argv[2];
 if (!target || !path.isAbsolute(target) || target === '/') {
@@ -19,16 +20,28 @@ async function walk(directory) {
 
 const files = await walk(target);
 const relativeFiles = new Set(files.map((file) => path.relative(target, file)));
-const required = ['.nojekyll', '404.html', 'CNAME', 'feed.xml', 'index.html', 'robots.txt', 'sitemap.xml'];
+const required = ['.nojekyll', '404.html', 'feed.xml', 'index.html', 'robots.txt', 'sitemap.xml'];
 for (const file of required) {
   if (!relativeFiles.has(file)) throw new Error(`Pages artifact is missing ${file}`);
 }
 
-const host = (await readFile(path.join(target, 'CNAME'), 'utf8')).trim();
-if (host !== 'quigley.au') {
-  throw new Error('Pages artifact has an unexpected CNAME');
+// A CNAME in the artifact re-applies the Pages custom domain, which makes GitHub
+// 301 qu1gl3s.github.io -> quigley.au. Cloudflare's blog-origin Worker fetches that
+// hostname, so the redirect takes the site down. Keep it out.
+if (relativeFiles.has('CNAME')) {
+  throw new Error('Pages artifact contains a CNAME; that re-sets the Pages custom domain and breaks the Cloudflare Worker');
 }
-const origin = `https://${host}`;
+
+// With no CNAME there is nothing in the artifact to anchor the origin against, so
+// state it here and hold lib/site.ts to it; the two cannot then drift apart unnoticed.
+const EXPECTED_ORIGIN = 'https://quigley.au';
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const declared = (await readFile(path.join(root, 'lib', 'site.ts'), 'utf8'))
+  .match(/SITE_ORIGIN\s*=\s*'([^']+)'/)?.[1];
+if (declared !== EXPECTED_ORIGIN) {
+  throw new Error(`lib/site.ts declares SITE_ORIGIN ${declared}, expected ${EXPECTED_ORIGIN}`);
+}
+const origin = EXPECTED_ORIGIN;
 
 const violations = [];
 for (const file of files) {
