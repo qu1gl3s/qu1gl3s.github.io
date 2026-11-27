@@ -52,7 +52,7 @@ for (const file of outputFiles) {
   const relative = path.relative(output, file);
   const basename = path.basename(file);
   if (relative.startsWith('404/') || relative.startsWith('_not-found/')) continue;
-  const keep = file.endsWith('.html') || file.endsWith('.xml') || ['robots.txt', 'favicon.svg', 'og.png', 'CNAME'].includes(basename);
+  const keep = file.endsWith('.html') || file.endsWith('.xml') || ['robots.txt', 'favicon.svg', 'og.png'].includes(basename);
   if (!keep) continue;
 
   const destination = path.join(target, relative);
